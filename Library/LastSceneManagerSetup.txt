@@ -1,0 +1,5 @@
+sceneSetups:
+- path: Assets/Gridness Studios/Elementary Dungeon Pack Lite/Demo Scene/DungeonLiteScene-TopDown.unity
+  isLoaded: 1
+  isActive: 1
+  isSubScene: 0
