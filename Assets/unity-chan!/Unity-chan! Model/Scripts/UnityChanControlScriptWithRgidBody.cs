@@ -78,36 +78,47 @@ namespace UnityChan
 			rb.useGravity = true;//ジャンプ中に重力を切るので、それ以外は重力の影響を受けるようにする
 		
 		
-		
+		    int receivedData;
+			if (int.TryParse(TcpListenerManager.dataReceived, out receivedData) && receivedData >= 30 && receivedData <= 50)
+				{
+					// If so, multiply the value by 0.1 and assign it to v for walking speed
+					v = receivedData * 0.06f;
+				}
 			// 以下、キャラクターの移動処理
 			velocity = new Vector3 (0, 0, v);		// 上下のキー入力からZ軸方向の移動量を取得
 			// キャラクターのローカル空間での方向に変換
 			velocity = transform.TransformDirection (velocity);
 			//以下のvの閾値は、Mecanim側のトランジションと一緒に調整する
 			if (v > 0.1) {
-				velocity *= forwardSpeed;		// 移動速度を掛ける
+				velocity *= forwardSpeed;
+				Debug.Log("walking");		// 移動速度を掛ける
 			} else if (v < -0.1) {
 				velocity *= backwardSpeed;	// 移動速度を掛ける
 			}
 		
-			if (Input.GetButtonDown ("Jump") ) {	// スペースキーを入力したら
+			if (Input.GetButtonDown ("Jump")||  (TcpListenerManager.dataReceived=="150" && !anim.GetBool("Jump") ) ) {	// スペースキーを入力したら
 
-				//アニメーションのステートがLocomotionの最中のみジャンプできる
-				//if (currentBaseState.nameHash == locoState) {
-					//ステート遷移中でなかったらジャンプできる
-					//if (!anim.IsInTransition (0)) {
-						Debug.Log("this one");
-						rb.AddForce (Vector3.up * jumpPower, ForceMode.Impulse);
+				Debug.Log("Jump condition met");
+
+    // Simulate pressing the space bar for 1 second
+    float simulatedJumpDuration = 1.0f;  // Adjust the duration as needed
+    float simulatedJumpForce = jumpPower / simulatedJumpDuration;
+
+    rb.AddForce(Vector3.up * simulatedJumpForce, ForceMode.Impulse);
+    anim.SetBool("Jump", true);
+
+    // Use a coroutine to reset the Jump state after the simulated duration
+    StartCoroutine(ResetJumpState(simulatedJumpDuration));
+	TcpListenerManager.dataReceived="0";
+						// Debug.Log("this one");
+						// rb.AddForce (Vector3.up * jumpPower, ForceMode.Impulse);
 						
-						anim.SetBool ("Jump", true);
-						
-					    
-					//}
-				//}
+						// anim.SetBool ("Jump", true);
+					
 			}
 		
 
-			// 上下のキー入力でキャラクターを移動させる
+			
 			transform.localPosition += velocity * Time.fixedDeltaTime;
 
 			// 左右のキー入力でキャラクタをY軸で旋回させる
@@ -125,17 +136,14 @@ namespace UnityChan
 			}
 		// JUMP中の処理
 		// 現在のベースレイヤーがjumpStateの時
-		else if (currentBaseState.nameHash == jumpState ||  TcpListenerManager.dataReceived=="6") {
+		else if (currentBaseState.nameHash == jumpState ) {
 				//cameraObject.SendMessage ("setCameraPositionJumpView");	// ジャンプ中のカメラに変更
 				// ステートがトランジション中でない場合
-				if (!anim.IsInTransition (0)||  TcpListenerManager.dataReceived=="6") {
+				if (!anim.IsInTransition (0)) {
 				
 					// 以下、カーブ調整をする場合の処理
 					if (useCurves) {
-						Debug.Log("next one");
-						// 以下JUMP00アニメーションについているカーブJumpHeightとGravityControl
-						// JumpHeight:JUMP00でのジャンプの高さ（0〜1）
-						// GravityControl:1⇒ジャンプ中（重力無効）、0⇒重力有効
+					
 						float jumpHeight = anim.GetFloat ("JumpHeight");
 						//Debug.Log("jumpheight"+jumpHeight);
 						float gravityControl = anim.GetFloat ("GravityControl"); 
@@ -143,7 +151,7 @@ namespace UnityChan
 							rb.useGravity = false;	//ジャンプ中の重力の影響を切る
 					    //Debug.Log("gravity"+ gravityControl);
 						// レイキャストをキャラクターのセンターから落とす
-						Ray ray = new Ray (transform.position + Vector3.up, -Vector3.up);
+						Ray ray = new Ray (transform.position + Vector3.up*0.5f, -Vector3.up);
 						Debug.Log("chan jumped");
 						RaycastHit hitInfo = new RaycastHit ();
 						Debug.Log(hitInfo.distance);
@@ -205,5 +213,13 @@ namespace UnityChan
 			col.height = orgColHight;
 			col.center = orgVectColCenter;
 		}
+
+IEnumerator ResetJumpState(float delay)
+{
+    yield return new WaitForSeconds(delay);
+
+    // Reset the Jump state after the simulated duration
+    anim.SetBool("Jump", false);
+}
 	}
 }
